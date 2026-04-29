@@ -1,54 +1,42 @@
 package com.example.cosmicwhisper.presentation.fragments
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.app.audiototext.RecognitionListener
-import com.app.audiototext.SpeechRecognitionEngine
+import com.app.audiototext.transcriber.RealtimeTranscriber
 import com.example.cosmicwhisper.R
 import com.example.cosmicwhisper.data.local.database.AppDatabase
 import com.example.cosmicwhisper.data.local.entities.TranscriptionEntity
 import com.example.cosmicwhisper.databinding.FragmentTranscribeBinding
+import com.example.cosmicwhisper.domain.utils.PermissionHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlin.math.floor
 
 /**
- * Real-time speech transcription fragment using TensorFlow Lite.
- * Features:
- * - Continuous audio capture and transcription
- * - Word-by-word display with auto-scrolling to latest text
- * - Recording timer
- * - Save to database
- * - Copy & Share functionality (via toolbar)
+ * Real-time live transcription fragment using TensorFlow Lite
+ * Provides immediate word-by-word transcription with auto-scrolling
  */
-class TranscribeFragment : Fragment(), RecognitionListener {
+class TranscribeFragment : Fragment() {
 
     private var _binding: FragmentTranscribeBinding? = null
     private val binding get() = _binding!!
 
-    private var speechEngine: SpeechRecognitionEngine? = null
+    private var transcriber: RealtimeTranscriber? = null
     private var isRecording = false
-    private var recordingStartTime: Long = 0
-    private val timerJob = mutableListOf<kotlinx.coroutines.Job>()
+    private var timerJob: Job? = null
+    private var recordingStartTime = 0L
+    private var transcriptionJob: Job? = null
 
-    // State management for transcription
-    private val currentTranscriptionBuilder = StringBuilder()
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // Request permissions if needed
-        requestPermissionsIfNeeded()
+    companion object {
+        const val AUDIO_PERMISSION_REQUEST_CODE = 1001
+        const val UPDATE_INTERVAL_MS = 100L  // Update UI every 100ms
     }
 
     override fun onCreateView(
@@ -63,11 +51,44 @@ class TranscribeFragment : Fragment(), RecognitionListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        initializeTranscriber()
         setupUI()
+        setupRecordButton()
     }
 
+    /**
+     * Initialize the transcriber with callbacks
+     */
+    private fun initializeTranscriber() {
+        transcriber = RealtimeTranscriber(
+            context = requireContext(),
+            onTranscriptionUpdate = { text ->
+                updateTranscriptionUI(text)
+            },
+            onError = { error ->
+                handleError(error)
+            }
+        )
+
+        if (!transcriber!!.initialize()) {
+            showError("Failed to initialize transcriber")
+        }
+    }
+
+    /**
+     * Setup UI elements
+     */
     private fun setupUI() {
-        // Record button click listener
+        binding.tvTranscription.text = ""
+        binding.statusTitle.text = getString(R.string.start_transcription)
+        binding.statusSubtitle.text = getString(R.string.tap_to_start)
+        binding.tvTimer.text = getString(R.string.timer_default)
+    }
+
+    /**
+     * Setup record button click listener
+     */
+    private fun setupRecordButton() {
         binding.fabRecordToggle.setOnClickListener {
             if (isRecording) {
                 stopRecording()
@@ -75,169 +96,113 @@ class TranscribeFragment : Fragment(), RecognitionListener {
                 startRecording()
             }
         }
-
-        // Initialize empty state
-        updateUIState(isRecording = false)
     }
 
+    /**
+     * Start recording and transcription
+     */
     private fun startRecording() {
-        // Check permission
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Toast.makeText(
-                requireContext(),
-                R.string.permission_required,
-                Toast.LENGTH_SHORT
-            ).show()
+        // Check for audio permission
+        if (!PermissionHelper.hasAudioPermission(requireContext())) {
+            PermissionHelper.requestAudioPermission(this, AUDIO_PERMISSION_REQUEST_CODE)
             return
         }
 
         isRecording = true
         recordingStartTime = System.currentTimeMillis()
-        currentTranscriptionBuilder.clear()
+
+        // Update UI
+        binding.statusTitle.text = getString(R.string.recording)
+        binding.statusSubtitle.text = getString(R.string.tap_to_stop)
+        binding.fabRecordToggle.setImageResource(R.drawable.ic_mic)
+
+        // Clear previous transcription
+        transcriber?.clearTranscription()
         binding.tvTranscription.text = ""
 
-        // Initialize speech recognition engine
-        speechEngine = SpeechRecognitionEngine(this)
-        speechEngine?.startRecognition(viewLifecycleOwner.lifecycleScope)
+        // Start timer
+        startTimer()
 
-        // Start timer update
-        startTimerUpdate()
-        updateUIState(isRecording = true)
+        // Start transcription in coroutine
+        transcriptionJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+            transcriber?.startTranscription()
+        }
 
-        Toast.makeText(
-            requireContext(),
-            R.string.recording_started,
-            Toast.LENGTH_SHORT
-        ).show()
+        Toast.makeText(requireContext(), R.string.recording_started, Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * Stop recording and save transcription
+     */
     private fun stopRecording() {
         isRecording = false
-        speechEngine?.stopRecognition()
 
-        // Cancel timer updates
-        timerJob.forEach { it.cancel() }
-        timerJob.clear()
+        // Stop timer
+        timerJob?.cancel()
 
-        updateUIState(isRecording = false)
+        // Stop transcription
+        val finalTranscription = transcriber?.stopTranscription() ?: ""
 
-        Toast.makeText(
-            requireContext(),
-            R.string.recording_stopped,
-            Toast.LENGTH_SHORT
-        ).show()
+        // Update UI
+        binding.statusTitle.text = getString(R.string.start_transcription)
+        binding.statusSubtitle.text = getString(R.string.tap_to_start)
+        binding.fabRecordToggle.setImageResource(R.drawable.ic_mic)
+
+        // Save transcription if not empty
+        if (finalTranscription.isNotBlank()) {
+            saveTranscription(finalTranscription)
+            showSuccess("Transcription saved")
+        } else {
+            binding.tvTranscription.text = getString(R.string.no_transcription)
+            showError("No speech detected")
+        }
+
+        binding.tvTimer.text = getString(R.string.timer_default)
+        Toast.makeText(requireContext(), R.string.recording_stopped, Toast.LENGTH_SHORT).show()
     }
 
-    private fun startTimerUpdate() {
-        val timerCoroutine = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+    /**
+     * Update transcription display with real-time text
+     */
+    private fun updateTranscriptionUI(text: String) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            binding.tvTranscription.text = text
+
+            // Auto-scroll to latest transcription
+            binding.tvTranscription.post {
+                val scrollAmount = binding.tvTranscription.lineCount * binding.tvTranscription.lineHeight
+                binding.tvTranscription.scrollTo(0, scrollAmount)
+            }
+        }
+    }
+
+    /**
+     * Start recording timer
+     */
+    private fun startTimer() {
+        timerJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             while (isRecording) {
-                val elapsedMillis = System.currentTimeMillis() - recordingStartTime
-                val seconds = elapsedMillis / 1000
+                val elapsedTime = System.currentTimeMillis() - recordingStartTime
+                val seconds = floor(elapsedTime / 1000.0).toInt()
                 val minutes = seconds / 60
-                val displaySeconds = seconds % 60
+                val secondsInMinute = seconds % 60
 
                 binding.tvTimer.text = String.format(
-                    Locale.getDefault(),
                     "%02d:%02d",
                     minutes,
-                    displaySeconds
+                    secondsInMinute
                 )
 
-                // Update every 100ms for smooth timer
-                kotlinx.coroutines.delay(100)
-            }
-        }
-        timerJob.add(timerCoroutine)
-    }
-
-    private fun updateUIState(isRecording: Boolean) {
-        binding.apply {
-            if (isRecording) {
-                statusTitle.text = getString(R.string.recording_in_progress)
-                statusSubtitle.text = getString(R.string.tap_to_stop)
-                fabRecordToggle.setImageResource(R.drawable.ic_stop)
-                tvTimer.visibility = View.VISIBLE
-                tvTranscription.visibility = View.VISIBLE
-            } else {
-                statusTitle.text = getString(R.string.start_transcription)
-                statusSubtitle.text = getString(R.string.tap_to_start)
-                fabRecordToggle.setImageResource(R.drawable.ic_mic)
-                tvTimer.visibility = View.GONE
-                tvTimer.text = getString(R.string.timer_default)
+                delay(100)  // Update every 100ms
             }
         }
     }
 
     /**
-     * Real-time transcription callback - updates UI with partial results.
-     * This is called frequently as new words are recognized.
+     * Save transcription to database
      */
-    override fun onPartialResult(text: String) {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            currentTranscriptionBuilder.clear()
-            currentTranscriptionBuilder.append(text)
-            binding.tvTranscription.text = text
-
-            // Auto-scroll to bottom (latest transcription)
-            binding.cardTranscription.post {
-                binding.cardTranscription.scrollTo(
-                    0,
-                    binding.cardTranscription.bottom
-                )
-            }
-        }
-    }
-
-    /**
-     * Final result callback - when recognizer determines segment is complete.
-     */
-    override fun onFinalResult(text: String) {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            currentTranscriptionBuilder.clear()
-            currentTranscriptionBuilder.append(text)
-            binding.tvTranscription.text = text
-
-            // Save to database asynchronously
-            saveTranscription(text)
-        }
-    }
-
-    override fun onRecognitionStarted() {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            binding.statusSubtitle.text = getString(R.string.listening)
-        }
-    }
-
-    override fun onSpeechDetected() {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            binding.statusSubtitle.text = getString(R.string.processing)
-        }
-    }
-
-    override fun onRecognitionStopped() {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            binding.statusSubtitle.text = getString(R.string.recording_stopped)
-        }
-    }
-
-    override fun onError(errorCode: Int, errorMessage: String) {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            isRecording = false
-            updateUIState(isRecording = false)
-            Toast.makeText(
-                requireContext(),
-                "Error: $errorMessage",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
     private fun saveTranscription(text: String) {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val database = AppDatabase.getDatabase(requireContext())
                 val entity = TranscriptionEntity(
@@ -245,64 +210,76 @@ class TranscribeFragment : Fragment(), RecognitionListener {
                     timestamp = System.currentTimeMillis()
                 )
                 database.transcriptionDao().insert(entity)
-
-                // Notify on main thread
-                launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.transcription_saved,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
             } catch (e: Exception) {
                 e.printStackTrace()
+                showError("Failed to save transcription: ${e.message}")
             }
         }
     }
 
-    private fun requestPermissionsIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.RECORD_AUDIO
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(
-                    arrayOf(Manifest.permission.RECORD_AUDIO),
-                    PERMISSION_REQUEST_CODE
-                )
+    /**
+     * Handle transcription errors
+     */
+    private fun handleError(error: String) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            showError(error)
+            if (isRecording) {
+                stopRecording()
             }
         }
     }
 
+    /**
+     * Show error toast
+     */
+    private fun showError(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Show success toast
+     */
+    private fun showSuccess(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Handle permission result
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(
-                    requireContext(),
-                    R.string.permission_denied,
-                    Toast.LENGTH_SHORT
-                ).show()
+
+        PermissionHelper.handlePermissionResult(
+            requestCode,
+            permissions,
+            grantResults,
+            AUDIO_PERMISSION_REQUEST_CODE,
+            onGranted = {
+                startRecording()
+            },
+            onDenied = {
+                showError("Audio permission is required for transcription")
             }
-        }
+        )
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        
+        // Clean up resources
         if (isRecording) {
             stopRecording()
         }
-        timerJob.forEach { it.cancel() }
-        timerJob.clear()
-        _binding = null
-    }
 
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 1001
+        timerJob?.cancel()
+        transcriptionJob?.cancel()
+        transcriber?.release()
+        transcriber = null
+
+        _binding = null
     }
 }

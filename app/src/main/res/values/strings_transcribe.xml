@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Transcription Fragment Strings -->
+    <string name="start_transcription">Start Transcription</string>
+    <string name="tap_to_start">Tap to start recording</string>
+    <string name="recording">Recording...</string>
+    <string name="recording_in_progress">Recording in Progress</string>
+    <string name="tap_to_stop">Tap to stop</string>
+    <string name="recording_started">Recording started</string>
+    <string name="recording_stopped">Recording stopped</string>
+    <string name="listening">Listening...</string>
+    <string name="processing">Processing speech...</string>
+    <string name="timer_default">00:00</string>
+    <string name="permission_required">Audio permission is required</string>
+    <string name="permission_denied">Audio permission was denied</string>
+    <string name="no_transcription">No speech detected</string>
+    <string name="transcription_saved">Transcription saved to history</string>
+    <string name="record">Record Audio</string>
+</resources>
