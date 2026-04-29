@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!--
+      Mimics the CSS blur and 5% opacity from your HTML design.
+      Start Color: #1AD0BCFF (10% opacity of your primary color for the core)
+      Center Color: #08D0BCFF (3% opacity for a smooth falloff)
+      End Color: #00D0BCFF (0% opacity / fully transparent at the edges)
+    -->
+    <gradient
+        android:type="radial"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:gradientRadius="200dp"
+        android:startColor="#1AD0BCFF"
+        android:centerColor="#08D0BCFF"
+        android:endColor="#00D0BCFF" />
+
+</shape>

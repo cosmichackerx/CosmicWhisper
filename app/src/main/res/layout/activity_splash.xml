@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#131313">
+
+    <!-- Subtle Background Glow (Optional Decoration) -->
+    <View
+        android:id="@+id/subtleBackgroundGlow"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:background="@drawable/bg_glow_gradient"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Central Identity Section -->
+    <LinearLayout
+        android:id="@+id/identitySection"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="@+id/subtleBackgroundGlow"
+        app:layout_constraintEnd_toEndOf="@+id/subtleBackgroundGlow"
+        app:layout_constraintStart_toStartOf="@+id/subtleBackgroundGlow"
+        app:layout_constraintTop_toTopOf="@+id/subtleBackgroundGlow"
+        app:layout_constraintVertical_bias="0.45">
+
+        <!-- App Icon with Rounded Border -->
+        <FrameLayout
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:background="@drawable/bg_icon_container"
+            android:padding="24dp">
+
+            <ImageView
+                android:id="@+id/appIcon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="App Icon"
+                android:src="@drawable/ic_mic" />
+        </FrameLayout>
+
+        <!-- App Name -->
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Transcribe"
+            android:textColor="#E5E2E1"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <!-- Slogan -->
+        <TextView
+            android:id="@+id/tvSlogan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:letterSpacing="0.2"
+            android:text="VOICE TO INTELLIGENCE"
+            android:textAllCaps="true"
+            android:textColor="#958EA0"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- Bottom Loading Section -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="48dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Progress Bar (Material3 Style) -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:layout_width="200dp"
+            android:layout_height="4dp"
+            android:indeterminate="true"
+            android:progressDrawable="@drawable/custom_progress_bar" />
+
+        <!-- Status Text -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:letterSpacing="0.1"
+            android:text="Initializing..."
+            android:textAllCaps="true"
+            android:textColor="#958EA0"
+            android:textSize="10sp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

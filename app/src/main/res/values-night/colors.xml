@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Theme Colors (Vivid Charcoal) -->
+    <color name="primary">#8B5CF6</color> <!-- Vibrant Purple -->
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="primaryContainer">#8B5CF6</color>
+    <color name="onPrimaryContainer">#FFFFFF</color>
+
+    <color name="secondary">#2DD4BF</color> <!-- Teal/Cyan from image -->
+    <color name="onSecondary">#121212</color>
+    <color name="secondaryContainer">#1E293B</color>
+    <color name="onSecondaryContainer">#2DD4BF</color>
+
+    <color name="tertiary">#F472B6</color> <!-- Pink from image -->
+    <color name="onTertiary">#121212</color>
+    <color name="tertiaryContainer">#2D1B22</color>
+    <color name="onTertiaryContainer">#F472B6</color>
+
+    <color name="background">#121212</color>
+    <color name="onBackground">#E2E8F0</color>
+
+    <color name="surface">#1E1E1E</color>
+    <color name="onSurface">#E2E8F0</color>
+    <color name="surfaceVariant">#2D2D2D</color>
+    <color name="onSurfaceVariant">#94A3B8</color>
+
+    <color name="outline">#475569</color>
+    <color name="outlineVariant">#334155</color>
+
+    <color name="surfaceContainerLowest">#0A0A0A</color>
+    <color name="surfaceContainerLow">#121212</color>
+    <color name="surfaceContainer">#1C1C1C</color>
+    <color name="surfaceContainerHigh">#252525</color>
+    <color name="surfaceContainerHighest">#2D2D2D</color>
+</resources>

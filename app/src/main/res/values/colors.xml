@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light Theme Colors (Cosmic Whisper Branding) -->
+    <color name="primary">#6442D6</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="primaryContainer">#6442D6</color> <!-- Using primary color for FAB background as per UI -->
+    <color name="onPrimaryContainer">#FFFFFF</color>
+
+    <color name="secondary">#4D4256</color>
+    <color name="onSecondary">#FFFFFF</color>
+    <color name="secondaryContainer">#EADAF3</color>
+    <color name="onSecondaryContainer">#21182A</color>
+
+    <color name="tertiary">#F8F1F6</color>
+    <color name="onTertiary">#1C1B1D</color>
+    <color name="tertiaryContainer">#FFFFFF</color>
+
+    <color name="neutral">#1C1B1D</color>
+
+    <color name="background">#F7F2F5</color> <!-- surface-container-low -->
+    <color name="onBackground">#1C1B1D</color>
+
+    <color name="surface">#FFFFFF</color>
+    <color name="onSurface">#1C1B1D</color>
+    <color name="surfaceVariant">#F1EDEF</color>
+    <color name="onSurfaceVariant">#484554</color>
+
+    <color name="outline">#797586</color>
+    <color name="outlineVariant">#CAC4D7</color>
+
+    <color name="surfaceContainerLowest">#FFFFFF</color>
+    <color name="surfaceContainerLow">#F7F2F5</color>
+    <color name="surfaceContainer">#F1EDEF</color>
+    <color name="surfaceContainerHigh">#EBE7E9</color>
+    <color name="surfaceContainerHighest">#E6E1E4</color>
+</resources>
